@@ -17,7 +17,10 @@ const EditMeal = ({ params }) => {
   const [ingredients, setIngredients] = useState(mealToEdit[0].ingredients);
   const [steps, setSteps] = useState(mealToEdit[0].steps);
   const [counter, setCounter] = useState(ingredients.length + 1);
+  const ingredientsDetails = [];
+  const stepsDetails = [];
 
+  console.log(ingredientsDetails, stepsDetails);
   const addNewIngInputFiels = () => {
     setIngredients([...ingredients, ""]);
   };
@@ -37,6 +40,29 @@ const EditMeal = ({ params }) => {
     newArray.splice(index, 1);
     setSteps(newArray);
   };
+
+  const handleIngredientInput = (event, index) => {
+    let { value } = event.target;
+    let onChangeValue = [...ingredients];
+    onChangeValue[index] = value;
+    setIngredients(onChangeValue);
+  };
+  const handleStepsInput = (event, index) => {
+    let { value } = event.target;
+    let onChangeValue = [...steps];
+    onChangeValue[index] = value;
+    setSteps(onChangeValue);
+  };
+  for (const [key, value] of Object.entries(ingredients)) {
+    if (value !== "") {
+      ingredientsDetails.push(`${value}`);
+    }
+  }
+  for (const [key, value] of Object.entries(steps)) {
+    if (value !== "") {
+      stepsDetails.push(`${value}`);
+    }
+  }
 
   const [catId, setCatId] = useState([]);
   const [category, setCategory] = useState([
@@ -68,7 +94,6 @@ const EditMeal = ({ params }) => {
     { id: "PYkRMmhbJwleBQ7m9L1Z", title: "سناكس" },
   ]);
 
-  console.log(mealToEdit[0].hasMeatCube);
   const [hasMeatCube, setHasMeatCube] = useState(mealToEdit[0].hasMeatCube);
   const [hasGroundMeat, setHasGroundMeat] = useState(
     mealToEdit[0].hasGroundMeat
@@ -319,7 +344,7 @@ const EditMeal = ({ params }) => {
             {ingredients.map((item, index) => {
               return (
                 <div className="mb-2">
-                  {ingredients.length > 0 && (
+                  {ingredients.length > 1 && (
                     <button
                       className="text-2xl tex-red-900 p-6"
                       onClick={(e) => deleteIngredientsInputField(index, e)}
@@ -340,6 +365,7 @@ const EditMeal = ({ params }) => {
                     style={{ direction: "rtl", minWidth: 400 }}
                     type="text"
                     value={item}
+                    onChange={(event) => handleIngredientInput(event, index)}
                   />
                 </div>
               );
@@ -375,6 +401,7 @@ const EditMeal = ({ params }) => {
                     style={{ direction: "rtl", minWidth: 400 }}
                     type="text"
                     value={item}
+                    onChange={(event) => handleStepsInput(event, index)}
                   />
                 </div>
               );
