@@ -27,6 +27,7 @@ const AddMeal = () => {
   const [servings, setServings] = useState();
   const [ingredients, setIngredients] = useState(["", "", "", ""]);
   const [steps, setSteps] = useState(["", "", "", ""]);
+  const [loading, setLoading] = useState(false);
   const ingredientsDetails = [];
   const stepsDetails = [];
 
@@ -218,6 +219,7 @@ const AddMeal = () => {
   };
 
   const AddMeal = async (e) => {
+    setLoading(true);
     e.preventDefault();
     const imageUrl = await uploadImages();
     await addDoc(collection(db, "AllMeals"), {
@@ -393,8 +395,16 @@ const AddMeal = () => {
     setHasRinga(false);
     setHasFesekh(false);
     setHasBorghal(false);
-    alert("تم تحميل الوصفة");
+    setLoading(false);
   };
+
+  if (loading) {
+    return (
+      <div className="bg-white w-full h-screen  flex items-center justify-center">
+        <img className="w-40" src="/loading.gif" alt="loading" />
+      </div>
+    );
+  }
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
       {/* upload images */}
