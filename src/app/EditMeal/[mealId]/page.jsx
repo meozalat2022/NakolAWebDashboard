@@ -1,22 +1,88 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect, useReducer } from "react";
 import { MEALS } from "@/data/meals";
 import { CATEGORIES } from "@/data/categories";
 import Select from "react-select";
 import Switch from "react-switch";
+import {
+  getDoc,
+  doc,
+  getDocs,
+  collection,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { db } from "../../../../config";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { RiDeleteBin6Line } from "react-icons/ri";
+import { CiCircleMinus } from "react-icons/ci";
+
+const options = [
+  { value: "2dQKzEa7LSPXgFyVrkjn", label: "ايطاليانو" },
+  { value: "AmSjdSajPJa3HmEfPwzx", label: "هلا بالخليج" },
+  { value: "COszxRjARJTloZcwrgfn", label: "حلويات" },
+  { value: "XgBInPRkghWvQE15YMdo", label: "مخبوزات" },
+  { value: "ENyZxhcGdFqU2X3HktCF", label: "لحوم" },
+  { value: "ZZX3WfnqmVUoExPorfzS", label: "مشويات" },
+  { value: "FvWwsXNeP5Mo0xLzsYda", label: "مكسيكانو" },
+  { value: "KZEg9C92LStgFop45z35", label: "هندوستاني" },
+  { value: "RtndjQZeBum9smnJ7GPr", label: "صيني" },
+  { value: "ZVSbniKIQHvquikUEN0K", label: "فرنساوي" },
+  { value: "btpBDCR8uut6Jn6U9Bn9", label: "بحريات" },
+  { value: "eFzh7O99tRefolKRduuN", label: "ياباني " },
+  { value: "ecs6C8ha4tyzV1VLxMNn", label: "شوربات" },
+  { value: "hb25pSDpegLubwQJV5Dl", label: "امريكاني" },
+  { value: "hq2hQ0WYeebRvVXdnRgh", label: "كيتو" },
+  { value: "j0ErklzXhrgHgJp3yN3R", label: "مصري" },
+  { value: "l9hJvD13YoLD1wX5OwvD", label: "فطار او عشاء" },
+  { value: "o1YsyvKbJUz3vTlyIjoH", label: "فراخ ودواجن" },
+  { value: "qjAZ1VEaCtmVDCYTxUoT", label: "سلطات" },
+  { value: "lV9U3eIFPBKpi5oS8mOw", label: "سندوتشات" },
+  { value: "rWQfQOeHGoO1weF6Sdcp", label: "شامي" },
+  { value: "vfiXYXaoRZCj9yquHipa", label: "نباتي" },
+  { value: "prkRnZeDBVJ5S5RJFL2w", label: "صوصات" },
+  { value: "0Qcm1H7v9Snpz98Zwwk3", label: "مشروبات" },
+  { value: "bswiknaTh7dsrFavjWBT", label: "مقبلات" },
+  { value: "PYkRMmhbJwleBQ7m9L1Z", label: "سناكس" },
+];
+
+const reducer = (state, action) => {
+  switch (action.type) {
+    case "addCategory":
+      const foundCats = [];
+      for (let i in action.payload) {
+        const found = options.find((item) => item.value === action.payload[i]);
+        foundCats.push({ value: found.value, label: found.label });
+      }
+      return foundCats;
+    case "deleteCategory":
+      return state.filter((item) => item.value !== action.payload);
+    case "addNewCategory":
+      return [
+        ...state,
+        {
+          value: action.payload.value,
+          label: action.payload.label,
+        },
+      ];
+    default:
+      return state;
+  }
+};
 
 const EditMeal = ({ params }) => {
+  const [state, dispatch] = useReducer(reducer, { value: "", label: "" });
   const mealId = params.mealId;
-  const mealToEdit = MEALS.filter((item) => item.id === mealId);
-  const [title, setTitle] = useState(mealToEdit[0].title);
-  const [imageUrl, setImageUrl] = useState(mealToEdit[0].imageUrl);
-  const [flag, setFlag] = useState(mealToEdit[0].flag);
-  const [duration, setDuration] = useState(mealToEdit[0].duration);
-  const [calories, setCalories] = useState(mealToEdit[0].calories);
-  const [servings, setServings] = useState(mealToEdit[0].servings);
-  const [ingredients, setIngredients] = useState(mealToEdit[0].ingredients);
-  const [steps, setSteps] = useState(mealToEdit[0].steps);
+  const [mealToEdit, setMealToEdit] = useState([]);
+
+  const [title, setTitle] = useState("");
+  const [imageUrl, setImageUrl] = useState([]);
+  const [flag, setFlag] = useState("");
+  const [duration, setDuration] = useState();
+  const [calories, setCalories] = useState();
+  const [servings, setServings] = useState();
+  const [ingredients, setIngredients] = useState([]);
+  const [steps, setSteps] = useState([]);
   const [counter, setCounter] = useState(ingredients.length + 1);
   const ingredientsDetails = [];
   const stepsDetails = [];
@@ -64,14 +130,6 @@ const EditMeal = ({ params }) => {
     }
   }
 
-  const foundCats = [];
-  for (let i in mealToEdit[0].categoryIds) {
-    const found = CATEGORIES.find(
-      (item) => item.id === mealToEdit[0].categoryIds[i]
-    );
-    foundCats.push({ value: found?.id, label: found?.title });
-  }
-  const [selectedOption, setSelectedOption] = useState(foundCats);
   const [selectedFile, setSelectedFile] = useState([]);
   const handleImageChange = (event) => {
     const selectedImages = event.target.files;
@@ -81,152 +139,193 @@ const EditMeal = ({ params }) => {
     });
     setSelectedFile(imagesArray);
   };
-  const [catId, setCatId] = useState([]);
-  const options = [
-    { value: "2dQKzEa7LSPXgFyVrkjn", label: "ايطاليانو" },
-    { value: "AmSjdSajPJa3HmEfPwzx", label: "هلا بالخليج" },
-    { value: "COszxRjARJTloZcwrgfn", label: "حلويات" },
-    { value: "XgBInPRkghWvQE15YMdo", label: "مخبوزات" },
-    { value: "ENyZxhcGdFqU2X3HktCF", label: "لحوم" },
-    { value: "ZZX3WfnqmVUoExPorfzS", label: "مشويات" },
-    { value: "FvWwsXNeP5Mo0xLzsYda", label: "مكسيكانو" },
-    { value: "KZEg9C92LStgFop45z35", label: "هندوستاني" },
-    { value: "RtndjQZeBum9smnJ7GPr", label: "صيني" },
-    { value: "ZVSbniKIQHvquikUEN0K", label: "فرنساوي" },
-    { value: "btpBDCR8uut6Jn6U9Bn9", label: "بحريات" },
-    { value: "eFzh7O99tRefolKRduuN", label: "ياباني " },
-    { value: "ecs6C8ha4tyzV1VLxMNn", label: "شوربات" },
-    { value: "hb25pSDpegLubwQJV5Dl", label: "امريكاني" },
-    { value: "hq2hQ0WYeebRvVXdnRgh", label: "كيتو" },
-    { value: "j0ErklzXhrgHgJp3yN3R", label: "مصري" },
-    { value: "l9hJvD13YoLD1wX5OwvD", label: "فطار او عشاء" },
-    { value: "o1YsyvKbJUz3vTlyIjoH", label: "فراخ ودواجن" },
-    { value: "qjAZ1VEaCtmVDCYTxUoT", label: "سلطات" },
-    { value: "lV9U3eIFPBKpi5oS8mOw", label: "سندوتشات" },
-    { value: "rWQfQOeHGoO1weF6Sdcp", label: "شامي" },
-    { value: "vfiXYXaoRZCj9yquHipa", label: "نباتي" },
-    { value: "prkRnZeDBVJ5S5RJFL2w", label: "صوصات" },
-    { value: "0Qcm1H7v9Snpz98Zwwk3", label: "مشروبات" },
-    { value: "bswiknaTh7dsrFavjWBT", label: "مقبلات" },
-    { value: "PYkRMmhbJwleBQ7m9L1Z", label: "سناكس" },
-  ];
+  const handleSelectCategory = (event) => {
+    dispatch({
+      type: "addNewCategory",
+      payload: { value: event.value, label: event.label },
+    });
+  };
+  // const foundCats = [];
+  // for (let i in selectedOption) {
+  //   const found = options.find((item) => item.value === selectedOption[i]);
+  //   foundCats.push({ value: found?.value, label: found?.label });
+  // }
 
-  const [hasMeatCube, setHasMeatCube] = useState(mealToEdit[0].hasMeatCube);
-  const [hasGroundMeat, setHasGroundMeat] = useState(
-    mealToEdit[0].hasGroundMeat
-  );
-  // const [hasKofta, setHasKofta] = useState(mealToEdit[0].hasKofta);
-  const [hasLiver, setHasLiver] = useState(mealToEdit[0].hasLiver);
-  const [hasSusage, setHasSusage] = useState(mealToEdit[0].hasSusage);
-  const [hasMeatShank, setHasMeatShank] = useState(mealToEdit[0].hasMeatShank);
-  const [hasEscalop, setHasEscalop] = useState(mealToEdit[0].hasEscalop);
-  // const [hasMeatSteak, setHasMeatSteak] = useState(mealToEdit[0].hasMeatSteak);
-  const [hasMeatFlito, setHasMeatFlito] = useState(mealToEdit[0].hasMeatFlito);
-  const [hasMeatHeart, setHasMeatHeart] = useState(mealToEdit[0].hasMeatHeart);
-  const [hasMeatKalawy, setHasMeatKalawy] = useState(
-    mealToEdit[0].hasMeatKalawy
-  );
-  const [hasMeatKirsha, setHasMeatKirsha] = useState(
-    mealToEdit[0].hasMeatKirsha
-  );
-  const [hasMeatKaware, setHasMeatKaware] = useState(
-    mealToEdit[0].hasMeatKaware
-  );
-  const [hasMeatMombar, setHasMeatMombar] = useState(
-    mealToEdit[0].hasMeatMombar
-  );
-  const [hasMeatHeadMeat, setHasMeatHeadMeat] = useState(
-    mealToEdit[0].hasMeatHeadMeat
-  );
-  const [hasMeatAkawy, setHasMeatAkawy] = useState(mealToEdit[0].hasMeatAkawy);
-  const [hasMeatBrain, setHasMeatBrain] = useState(mealToEdit[0].hasMeatBrain);
-  const [hasCheckin, setHasCheckin] = useState(mealToEdit[0].hasCheckin);
-  const [hasCheckinFillet, SetHasCheckinFillet] = useState(
-    mealToEdit[0].hasCheckinFillet
-  );
-  const [hasTurkey, setHasTurkey] = useState(mealToEdit[0].hasTurkey);
-  const [hasKidney, setHasKidney] = useState(mealToEdit[0].hasKidney);
-  const [hasCheckinWings, setHasCheckinWings] = useState(
-    mealToEdit[0].hasCheckinWings
-  );
-  const [hasCheckinLegs, setHasCheckinLegs] = useState(
-    mealToEdit[0].hasCheckinLegs
-  );
-  // const [hasShawrma, setHasShawrma] = useState(mealToEdit[0].hasShawrma);
-  const [hasCheckinBreast, setHasCheckinBreast] = useState(
-    mealToEdit[0].hasCheckinBreast
-  );
-  // const [hasCheckinShish, setHasCheckinShish] = useState(mealToEdit[0].hasCheckinShish);
-  const [hasFish, setHasFish] = useState(mealToEdit[0].hasFish);
-  const [hasSeafood, setHasSeafood] = useState(mealToEdit[0].hasSeafood);
-  const [hasCrabs, setHasCrabs] = useState(mealToEdit[0].hasCrabs);
-  const [hasShrimp, setHasShrimp] = useState(mealToEdit[0].hasShrimp);
-  const [hasFishFillet, setHasFishFillet] = useState(
-    mealToEdit[0].hasFishFillet
-  );
-  const [hasCalamari, setHasCalamari] = useState(mealToEdit[0].hasCalamari);
-  const [hasLobester, setHasLobester] = useState(mealToEdit[0].hasLobester);
-  const [hasTuna, setHasTuna] = useState(mealToEdit[0].hasTuna);
-  const [hasRice, setHasRice] = useState(mealToEdit[0].hasRice);
-  const [hasPasta, setHasPasta] = useState(mealToEdit[0].hasPasta);
-  const [hasFrik, setHasFrik] = useState(mealToEdit[0].hasFrik);
-  const [hasPotatos, setHasPotatos] = useState(mealToEdit[0].hasPotatos);
-  const [hasEggplants, setHasEggplants] = useState(mealToEdit[0].hasEggplants);
-  const [hasZucchini, setHasZucchini] = useState(mealToEdit[0].hasZucchini);
-  const [hasPeas, setHasPeas] = useState(mealToEdit[0].hasPeas);
-  const [hasSpinach, setHasSpinach] = useState(mealToEdit[0].hasSpinach);
-  const [hasCauliflower, setHasCauliflower] = useState(
-    mealToEdit[0].hasCauliflower
-  );
-  const [hasOcra, setHasOcra] = useState(mealToEdit[0].hasOcra);
-  const [hasMolokhia, setHasMolokhia] = useState(mealToEdit[0].hasMolokhia);
-  const [hasVegetarian, setHasVegetarian] = useState(
-    mealToEdit[0].hasVegetarian
-  );
-  // const [hasKeto, setHasKeto] = useState(mealToEdit[0].hasKeto);
-  const [hasDiet, setHasDiet] = useState(mealToEdit[0].hasDiet);
-  const [hasCabbage, setHasCabbage] = useState(mealToEdit[0].hasCabbage);
-  const [hasBorccoli, setHasBorccoli] = useState(mealToEdit[0].hasBorccoli);
-  const [hasMashroom, setHasMashroom] = useState(mealToEdit[0].hasMashroom);
-  const [hasNodels, setHasNodels] = useState(mealToEdit[0].hasNodels);
-  const [hasSherya, setHasSherya] = useState(mealToEdit[0].hasSherya);
-  const [hasLazanya, setHasLazanya] = useState(mealToEdit[0].hasLazanya);
-  const [hasLessanAsfour, setHasLessanAsfour] = useState(
-    mealToEdit[0].hasLessanAsfour
-  );
-  const [hasOat, setHasOat] = useState(mealToEdit[0].hasOat);
-  const [hasYellowLentils, setHasYellowLentils] = useState(
-    mealToEdit[0].hasYellowLentils
-  );
-  const [hasBlackLentils, setHasBlackLentils] = useState(
-    mealToEdit[0].hasBlackLentils
-  );
-  const [hasHomous, setHasHomous] = useState(mealToEdit[0].hasHomous);
-  const [hasWhiteBeans, setHasWhiteBeans] = useState(
-    mealToEdit[0].hasWhiteBeans
-  );
-  const [hasLobya, setHasLobya] = useState(mealToEdit[0].hasLobya);
-  const [hasCorn, setHasCorn] = useState(mealToEdit[0].hasCorn);
-  const [hasGreenBeans, setHasGreenBeans] = useState(
-    mealToEdit[0].hasGreenBeans
-  );
-  const [hasCarots, setHasCarots] = useState(mealToEdit[0].hasCarots);
-  const [hasHotDogs, setHasHotDogs] = useState(mealToEdit[0].hasHotDogs);
-  const [hasBasmatiRice, setHasBasmatiRice] = useState(
-    mealToEdit[0].hasBasmatiRice
-  );
-  const [hasHamamAndSeman, setHasHamamAndSeman] = useState(
-    mealToEdit[0].hasHamamAndSeman
-  );
-  const [hasFakhda, setHasFakhda] = useState(mealToEdit[0].hasFakhda);
-  const [hasSalmon, setHasSalmon] = useState(mealToEdit[0].hasSalmon);
-  const [hasKaviar, setHasKaviar] = useState(mealToEdit[0].hasKaviar);
-  const [hasSweetPotato, setHasSweetPotato] = useState(
-    mealToEdit[0].hasSweetPotato
-  );
-  const [hasRinga, setHasRinga] = useState(mealToEdit[0].hasRinga);
-  const [hasFesekh, setHasFesekh] = useState(mealToEdit[0].hasFesekh);
-  const [hasBorghal, setHasBorghal] = useState(mealToEdit[0].hasBorghal);
+  const [hasMeatCube, setHasMeatCube] = useState(false);
+  const [hasGroundMeat, setHasGroundMeat] = useState(false);
+  // const [hasKofta, setHasKofta] = useState(false);
+  const [hasLiver, setHasLiver] = useState(false);
+  const [hasSusage, setHasSusage] = useState(false);
+  const [hasMeatShank, setHasMeatShank] = useState(false);
+  const [hasEscalop, setHasEscalop] = useState(false);
+  // const [hasMeatSteak, setHasMeatSteak] = useState(false);
+  const [hasMeatFlito, setHasMeatFlito] = useState(false);
+  const [hasMeatHeart, setHasMeatHeart] = useState(false);
+  const [hasMeatKalawy, setHasMeatKalawy] = useState(false);
+  const [hasMeatKirsha, setHasMeatKirsha] = useState(false);
+  const [hasMeatKaware, setHasMeatKaware] = useState(false);
+  const [hasMeatMombar, setHasMeatMombar] = useState(false);
+  const [hasMeatHeadMeat, setHasMeatHeadMeat] = useState(false);
+  const [hasMeatAkawy, setHasMeatAkawy] = useState(false);
+  const [hasMeatBrain, setHasMeatBrain] = useState(false);
+  const [hasCheckin, setHasCheckin] = useState(false);
+  const [hasCheckinFillet, SetHasCheckinFillet] = useState(false);
+  const [hasTurkey, setHasTurkey] = useState(false);
+  const [hasKidney, setHasKidney] = useState(false);
+  const [hasCheckinWings, setHasCheckinWings] = useState(false);
+  const [hasCheckinLegs, setHasCheckinLegs] = useState(false);
+  // const [hasShawrma, setHasShawrma] = useState(false);
+  const [hasCheckinBreast, setHasCheckinBreast] = useState(false);
+  // const [hasCheckinShish, setHasCheckinShish] = useState();
+  const [hasFish, setHasFish] = useState(false);
+  const [hasSeafood, setHasSeafood] = useState(false);
+  const [hasCrabs, setHasCrabs] = useState(false);
+  const [hasShrimp, setHasShrimp] = useState(false);
+  const [hasFishFillet, setHasFishFillet] = useState(false);
+  const [hasCalamari, setHasCalamari] = useState(false);
+  const [hasLobester, setHasLobester] = useState(false);
+  const [hasTuna, setHasTuna] = useState(false);
+  const [hasRice, setHasRice] = useState(false);
+  const [hasPasta, setHasPasta] = useState(false);
+  const [hasFrik, setHasFrik] = useState(false);
+  const [hasPotatos, setHasPotatos] = useState(false);
+  const [hasEggplants, setHasEggplants] = useState(false);
+  const [hasZucchini, setHasZucchini] = useState(false);
+  const [hasPeas, setHasPeas] = useState(false);
+  const [hasSpinach, setHasSpinach] = useState(false);
+  const [hasCauliflower, setHasCauliflower] = useState(false);
+  const [hasOcra, setHasOcra] = useState(false);
+  const [hasMolokhia, setHasMolokhia] = useState(false);
+  const [hasVegetarian, setHasVegetarian] = useState(false);
+  // const [hasKeto, setHasKeto] = useState(false);
+  const [hasDiet, setHasDiet] = useState(false);
+  const [hasCabbage, setHasCabbage] = useState(false);
+  const [hasBorccoli, setHasBorccoli] = useState(false);
+  const [hasMashroom, setHasMashroom] = useState(false);
+  const [hasNodels, setHasNodels] = useState(false);
+  const [hasSherya, setHasSherya] = useState(false);
+  const [hasLazanya, setHasLazanya] = useState(false);
+  const [hasLessanAsfour, setHasLessanAsfour] = useState(false);
+  const [hasOat, setHasOat] = useState(false);
+  const [hasYellowLentils, setHasYellowLentils] = useState(false);
+  const [hasBlackLentils, setHasBlackLentils] = useState(false);
+  const [hasHomous, setHasHomous] = useState(false);
+  const [hasWhiteBeans, setHasWhiteBeans] = useState(false);
+  const [hasLobya, setHasLobya] = useState(false);
+  const [hasCorn, setHasCorn] = useState(false);
+  const [hasGreenBeans, setHasGreenBeans] = useState(false);
+  const [hasCarots, setHasCarots] = useState(false);
+  const [hasHotDogs, setHasHotDogs] = useState(false);
+  const [hasBasmatiRice, setHasBasmatiRice] = useState(false);
+  const [hasHamamAndSeman, setHasHamamAndSeman] = useState(false);
+  const [hasFakhda, setHasFakhda] = useState(false);
+  const [hasSalmon, setHasSalmon] = useState(false);
+  const [hasKaviar, setHasKaviar] = useState(false);
+  const [hasSweetPotato, setHasSweetPotato] = useState(false);
+  const [hasRinga, setHasRinga] = useState(false);
+  const [hasFesekh, setHasFesekh] = useState(false);
+  const [hasBorghal, setHasBorghal] = useState(false);
+
+  useEffect(() => {
+    const fetchMeal = async () => {
+      try {
+        const mealCollection = doc(db, "AllMeals", mealId);
+        const getMeal = await getDoc(mealCollection).then((doc) => {
+          const data = doc.data();
+          data.id = doc.id;
+          return data;
+        });
+        setTitle(getMeal.title);
+        setImageUrl(getMeal.imageUrl);
+        // setSelectedFile(getMeal.imageUrl);
+        setFlag(getMeal.flag);
+        setDuration(getMeal.duration);
+        setServings(getMeal.servings);
+        setCalories(getMeal.calories);
+        // setSelectedOption(getMeal.categoryIds);
+        dispatch({ type: "addCategory", payload: getMeal.categoryIds });
+        setIngredients(getMeal.ingredients);
+        setSteps(getMeal.steps);
+        setHasMeatCube(getMeal.hasMeatCube);
+        setHasGroundMeat(getMeal.hasGroundMeat);
+        // setHasKofta(getMeal.hasKofta);
+        setHasLiver(getMeal.hasLiver);
+        setHasSusage(getMeal.hasSusage);
+        setHasMeatShank(getMeal.hasMeatShank);
+        setHasEscalop(getMeal.hasEscalop);
+        // setHasMeatSteak(getMeal.hasMeatSteak);
+        setHasMeatFlito(getMeal.hasMeatFlito);
+        setHasMeatHeart(getMeal.hasMeatHeart);
+        setHasMeatKalawy(getMeal.hasMeatKalawy);
+        setHasMeatKirsha(getMeal.hasMeatKirsha);
+        setHasMeatKaware(getMeal.hasMeatKaware);
+        setHasMeatMombar(getMeal.hasMeatMombar);
+        setHasMeatHeadMeat(getMeal.hasMeatHeadMeat);
+        setHasMeatAkawy(getMeal.hasMeatAkawy);
+        setHasMeatBrain(getMeal.hasMeatBrain);
+        setHasCheckin(getMeal.hasCheckin);
+        SetHasCheckinFillet(getMeal.hasCheckinFillet);
+        setHasTurkey(getMeal.hasTurkey);
+        setHasKidney(getMeal.hasKidney);
+        setHasCheckinWings(getMeal.hasCheckinWings);
+        setHasCheckinLegs(getMeal.hasCheckinLegs);
+        // setHasShawrma(getMeal.hasShawrma);
+        setHasCheckinBreast(getMeal.hasCheckinBreast);
+        // setHasCheckinShish(getMeal.hasCheckinShish);
+        setHasFish(getMeal.hasFish);
+        setHasSeafood(getMeal.hasSeafood);
+        setHasCrabs(getMeal.hasCrabs);
+        setHasShrimp(getMeal.hasShrimp);
+        setHasFishFillet(getMeal.hasFishFillet);
+        setHasCalamari(getMeal.hasCalamari);
+        setHasLobester(getMeal.hasLobester);
+        setHasTuna(getMeal.hasTuna);
+        setHasRice(getMeal.hasRice);
+        setHasPasta(getMeal.hasPasta);
+        setHasFrik(getMeal.hasFrik);
+        setHasPotatos(getMeal.hasPotatos);
+        setHasEggplants(getMeal.hasEggplants);
+        setHasZucchini(getMeal.hasZucchini);
+        setHasPeas(getMeal.hasPeas);
+        setHasSpinach(getMeal.hasSpinach);
+        setHasCauliflower(getMeal.hasCauliflower);
+        setHasOcra(getMeal.hasOcra);
+        setHasMolokhia(getMeal.hasMolokhia);
+        setHasVegetarian(getMeal.hasVegetarian);
+        // setHasKeto(getMeal.hasKeto);
+        setHasDiet(getMeal.hasDiet);
+        setHasCabbage(getMeal.hasCabbage);
+        setHasBorccoli(getMeal.hasBorccoli);
+        setHasMashroom(getMeal.hasMashroom);
+        setHasNodels(getMeal.hasNodels);
+        setHasSherya(getMeal.hasSherya);
+        setHasLazanya(getMeal.hasLazanya);
+        setHasLessanAsfour(getMeal.hasLessanAsfour);
+        setHasOat(getMeal.hasOat);
+        setHasYellowLentils(getMeal.hasYellowLentils);
+        setHasBlackLentils(getMeal.hasBlackLentils);
+        setHasHomous(getMeal.hasHomous);
+        setHasWhiteBeans(getMeal.hasWhiteBeans);
+        setHasLobya(getMeal.hasLobya);
+        setHasCorn(getMeal.hasCorn);
+        setHasGreenBeans(getMeal.hasGreenBeans);
+        setHasCarots(getMeal.hasCarots);
+        setHasHotDogs(getMeal.hasHotDogs);
+        setHasBasmatiRice(getMeal.hasBasmatiRice);
+        setHasHamamAndSeman(getMeal.hasHamamAndSeman);
+        setHasFakhda(getMeal.hasFakhda);
+        setHasSalmon(getMeal.hasSalmon);
+        setHasKaviar(getMeal.hasKaviar);
+        setHasSweetPotato(getMeal.hasSweetPotato);
+        setHasRinga(getMeal.hasRinga);
+        setHasFesekh(getMeal.hasFesekh);
+        setHasBorghal(getMeal.hasBorghal);
+      } catch (error) {
+        console.log("error", error);
+      }
+    };
+    fetchMeal();
+  }, [mealId]);
 
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
@@ -442,17 +541,24 @@ const EditMeal = ({ params }) => {
           </div>
         </section>
         {/* categories */}
-        {/* <section className="flex  justify-around ">
-          {foundCats.map((item) => {
-            return (
-              <div className="mt-4">
-                <button className=" bg-gray-200 p-2 px-4 text-center font-semibold rounded-lg">
-                  {item.title}
-                </button>
-              </div>
-            );
-          })}
-        </section> */}
+        <section className="flex  justify-around ">
+          {state.length >= 1 &&
+            state.map((item) => {
+              return (
+                <div className="mt-4">
+                  <button className=" bg-gray-200 p-2 px-4 text-center font-semibold rounded-lg">
+                    {item.label}
+                  </button>
+                  <CiCircleMinus
+                    className="hover:text-red-900 text-lg cursor-pointer rounded-full text-gray-500 bg-gray-200 mx-auto mt-2 relative bottom-14 left-10"
+                    onClick={() => {
+                      dispatch({ type: "deleteCategory", payload: item.value });
+                    }}
+                  />
+                </div>
+              );
+            })}
+        </section>
         {/* categories options */}
 
         <section className="flex flex-col justify-end items-end mx-6">
@@ -466,8 +572,9 @@ const EditMeal = ({ params }) => {
               }}
               className=""
               isMulti={true}
-              defaultValue={selectedOption}
-              onChange={setSelectedOption}
+              value={state}
+              defaultValue={state}
+              onChange={handleSelectCategory}
               options={options}
             />
             <h3 className="ml-4">نوع الوصفة</h3>
