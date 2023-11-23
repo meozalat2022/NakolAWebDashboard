@@ -58,15 +58,10 @@ const reducer = (state, action) => {
     case "deleteCategory":
       return state.filter((item) => item.value !== action.payload);
     case "addNewCategory":
-      return [
-        ...state,
-        {
-          value: action.payload.value,
-          label: action.payload.label,
-        },
-      ];
+      const allCategories = state.concat(action.payload);
+      return [...new Set(allCategories)];
     default:
-      return state;
+      state;
   }
 };
 
@@ -140,16 +135,8 @@ const EditMeal = ({ params }) => {
     setSelectedFile(imagesArray);
   };
   const handleSelectCategory = (event) => {
-    dispatch({
-      type: "addNewCategory",
-      payload: { value: event.value, label: event.label },
-    });
+    dispatch({ type: "addNewCategory", payload: event });
   };
-  // const foundCats = [];
-  // for (let i in selectedOption) {
-  //   const found = options.find((item) => item.value === selectedOption[i]);
-  //   foundCats.push({ value: found?.value, label: found?.label });
-  // }
 
   const [hasMeatCube, setHasMeatCube] = useState(false);
   const [hasGroundMeat, setHasGroundMeat] = useState(false);
@@ -326,7 +313,6 @@ const EditMeal = ({ params }) => {
     };
     fetchMeal();
   }, [mealId]);
-
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
       {/* upload images */}
@@ -546,11 +532,11 @@ const EditMeal = ({ params }) => {
             state.map((item) => {
               return (
                 <div className="mt-4">
-                  <button className=" bg-gray-200 p-2 px-4 text-center font-semibold rounded-lg">
+                  <button className="min-w-[100px] bg-gray-200 p-2 px-4 text-center font-semibold rounded-lg">
                     {item.label}
                   </button>
                   <CiCircleMinus
-                    className="hover:text-red-900 text-lg cursor-pointer rounded-full text-gray-500 bg-gray-200 mx-auto mt-2 relative bottom-14 left-10"
+                    className="hover:text-red-900 text-lg cursor-pointer rounded-full text-white bg-red-400 mx-auto mt-2 relative bottom-14 left-12"
                     onClick={() => {
                       dispatch({ type: "deleteCategory", payload: item.value });
                     }}
