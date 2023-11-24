@@ -12,11 +12,11 @@ import {
   updateDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "../../../../config";
+import { db, storage } from "../../../../config";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { CiCircleMinus } from "react-icons/ci";
-
+import { useRouter } from "next/navigation";
 const options = [
   { value: "2dQKzEa7LSPXgFyVrkjn", label: "ايطاليانو" },
   { value: "AmSjdSajPJa3HmEfPwzx", label: "هلا بالخليج" },
@@ -66,10 +66,10 @@ const reducer = (state, action) => {
 };
 
 const EditMeal = ({ params }) => {
+  const router = useRouter();
   const [state, dispatch] = useReducer(reducer, { value: "", label: "" });
   const mealId = params.mealId;
-  const [mealToEdit, setMealToEdit] = useState([]);
-
+  const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState("");
   const [imageUrl, setImageUrl] = useState([]);
   const [flag, setFlag] = useState("");
@@ -126,13 +126,19 @@ const EditMeal = ({ params }) => {
   }
 
   const [selectedFile, setSelectedFile] = useState([]);
-  const handleImageChange = (event) => {
-    const selectedImages = event.target.files;
-    const seledtedImagesArray = Array.from(selectedImages);
-    const imagesArray = seledtedImagesArray.map((file) => {
-      return URL.createObjectURL(file);
+  const handleImageChange = (e) => {
+    const selectedImages = e.target.files;
+    const selectedImagesArray = Array.from(selectedImages);
+    selectedImagesArray.map((file, index) => {
+      setSelectedFile((previousImages) => [
+        ...previousImages,
+        {
+          id: index,
+          src: URL.createObjectURL(file),
+          blob: file,
+        },
+      ]);
     });
-    setSelectedFile(imagesArray);
   };
   const handleSelectCategory = (event) => {
     dispatch({ type: "addNewCategory", payload: event });
@@ -313,6 +319,132 @@ const EditMeal = ({ params }) => {
     };
     fetchMeal();
   }, [mealId]);
+  const updatedCategories = [];
+
+  for (let i in state) {
+    updatedCategories.push(state[i].value);
+  }
+
+  const uploadImages = async () => {
+    const uploadedImages = [];
+    for (let i in selectedFile) {
+      const mealsImageRef = ref(
+        storage,
+        `AllMeals/${title}/${title}` + " " + i
+      );
+      await uploadBytes(mealsImageRef, selectedFile[i].blob).then(
+        async (snapShot) => {
+          const imagesToUpload = await getDownloadURL(mealsImageRef);
+          uploadedImages.push(imagesToUpload);
+        }
+      );
+    }
+    return uploadedImages;
+  };
+
+  const updateMeal = async (e) => {
+    setLoading(true);
+    e.preventDefault();
+    const images = await uploadImages();
+    const updatedMealDoc = doc(db, "AllMeals", mealId);
+    await updateDoc(updatedMealDoc, {
+      title,
+      flag,
+      duration,
+      calories,
+      servings,
+      categoryIds: updatedCategories,
+      imageUrl: imageUrl.concat(images),
+      ingredients: ingredientsDetails,
+      steps: stepsDetails,
+      timestamp: serverTimestamp(),
+      hasMeatCube,
+      hasGroundMeat,
+      hasTurkey,
+      // hasKofta,
+      hasLiver,
+      hasSusage,
+      hasMeatShank,
+      // hasMeatSteak,
+      hasEscalop,
+      hasMeatFlito,
+      hasMeatHeart,
+      hasMeatKalawy,
+      hasMeatKirsha,
+      hasMeatKaware,
+      hasMeatMombar,
+      hasMeatHeadMeat,
+      hasMeatAkawy,
+      hasMeatBrain,
+      hasCheckin,
+      hasCheckinFillet,
+      hasKidney,
+      hasCheckinWings,
+      hasCheckinLegs,
+      // hasShawrma,
+      hasCheckinBreast,
+      // hasCheckinShish,
+      hasFish,
+      hasSeafood,
+      hasCrabs,
+      hasShrimp,
+      hasFishFillet,
+      hasCalamari,
+      hasLobester,
+      hasTuna,
+      hasRice,
+      hasPasta,
+      hasFrik,
+      hasPotatos,
+      hasEggplants,
+      hasZucchini,
+      hasPeas,
+      hasSpinach,
+      hasCauliflower,
+      hasOcra,
+      hasMolokhia,
+      hasVegetarian,
+      // hasKeto,
+      hasDiet,
+      hasCabbage,
+      hasBorccoli,
+      hasMashroom,
+      hasNodels,
+      hasSherya,
+      hasLazanya,
+      hasLessanAsfour,
+      hasOat,
+      hasYellowLentils,
+      hasBlackLentils,
+      hasHomous,
+      hasWhiteBeans,
+      hasLobya,
+      hasCorn,
+      hasGreenBeans,
+      hasCarots,
+      hasHotDogs,
+      hasBasmatiRice,
+      hasHamamAndSeman,
+      hasFakhda,
+      hasSalmon,
+      hasSalmon,
+      hasKaviar,
+      hasSweetPotato,
+      hasRinga,
+      hasFesekh,
+      hasBorghal,
+    });
+    router.push("/");
+    setLoading(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white w-full h-screen  flex items-center justify-center">
+        <img className="w-40" src="/loading.gif" alt="loading" />
+      </div>
+    );
+  }
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
       {/* upload images */}
@@ -341,7 +473,7 @@ const EditMeal = ({ params }) => {
                 <div className="text-center pb-5">
                   <img
                     className="w-48 mx-1 rounded-md max-w-[200px] h-48 max-h-[200px] "
-                    src={item}
+                    src={item.src}
                     alt="useruploadedfile"
                   />
                   <RiDeleteBin6Line
@@ -407,7 +539,6 @@ const EditMeal = ({ params }) => {
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
                 type="text"
-                maxLength={2}
                 name="duration"
               />
             </div>
@@ -426,7 +557,6 @@ const EditMeal = ({ params }) => {
                 value={calories}
                 onChange={(e) => setCalories(e.target.value)}
                 type="text"
-                maxLength={2}
                 name="calories"
               />
             </div>
@@ -445,7 +575,6 @@ const EditMeal = ({ params }) => {
                 value={servings}
                 onChange={(e) => setServings(e.target.value)}
                 type="text"
-                maxLength={2}
                 name="servings"
               />
             </div>
@@ -1099,7 +1228,7 @@ const EditMeal = ({ params }) => {
           <div className="flex justify-center items-center">
             <button
               className="bg-blue-400 rounded-lg px-6 py-4 hover:bg-blue-900 hover:text-gray-200 text-center text-white"
-              // onClick={updateMeal}
+              onClick={updateMeal}
             >
               تعدل الوصفة
             </button>
