@@ -19,6 +19,7 @@ import {
   getDownloadURL,
   uploadBytes,
 } from "firebase/storage";
+import Link from "next/link";
 const AddMeal = () => {
   const [title, setTitle] = useState();
   const [flag, setFlag] = useState();
@@ -407,6 +408,14 @@ const AddMeal = () => {
   }
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
+      <div className="flex justify-start ml-6 mt-6">
+        <Link
+          href="/"
+          className="bg-blue-900 text-white rounded-lg px-6 py-2 text-center hover:bg-blue-400"
+        >
+          الرئيسية
+        </Link>
+      </div>
       {/* upload images */}
       <div className="mx-auto mt-10 h-60 mb-10">
         <div className="flex  justify-center items-center mx-4">
@@ -431,12 +440,6 @@ const AddMeal = () => {
         </div>
         <div className="mt-4 flex justify-center items-center mx-auto">
           <input multiple onChange={handleImageChange} type="file" />
-          <button
-            className="bg-blue-900 text-white p-2 text-center rounded-lg"
-            onClick={uploadImages}
-          >
-            حمل الصور
-          </button>
         </div>
       </div>
       <form className="mt-10" action="">

@@ -63,11 +63,14 @@ export default function Home() {
       console.log("error", error);
     }
   };
-
+  const deleteMeal = async (id) => {
+    await deleteDoc(doc(db, "AllMeals", id));
+    fetchMeals();
+  };
   useEffect(() => {
     fetchMeals();
   }, []);
-  if (!meals) {
+  if (!meals || meals.length < 1) {
     return (
       <div className="bg-white w-full h-screen  flex items-center justify-center">
         <img className="w-40" src="/loading.gif" alt="loading" />
@@ -84,17 +87,30 @@ export default function Home() {
           اضافة وصفة
         </Link>
       </div>
-      <div className="sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 max-w-6xl mx-auto py-4">
+      <div className="sm:grid bg-gray-100 h-screen rounded-md shadow-2xl sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 max-w-6xl mx-auto py-4">
         {meals &&
           meals.map((item) => {
             return (
               <div className="m-1" key={item.id}>
-                <Card meal={item} key={item.id} />
+                <Card
+                  deleteMeal={() => {
+                    deleteMeal(item.id);
+                  }}
+                  meal={item}
+                  key={item.id}
+                />
               </div>
             );
           })}
       </div>
-      <button onClick={fetChMore}>More</button>
+      <div className="flex justify-center items-center mt-10">
+        <button
+          className="p-4 rounded-lg bg-blue-800 text-white hover:bg-blue-400 px-8"
+          onClick={fetChMore}
+        >
+          المزيد
+        </button>
+      </div>
     </>
   );
 }

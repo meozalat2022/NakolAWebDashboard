@@ -1,8 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-
-const Card = ({ meal, key }) => {
+const Card = ({ meal, key, deleteMeal }) => {
   return (
     <>
       <div className="w-[280px]  group cursor-pointer p-3 hover:shadow-slate-400 shadow-md rounded-lg border border-slate-400 m-2 transition-shadow duration-200">
@@ -29,7 +28,10 @@ const Card = ({ meal, key }) => {
         {/* <button className="mx-2 bg-blue-600 p-2 text-center text-white text-sm rounded-lg ">
           تعديل الوصفة
         </button> */}
-        <button className="mx-2 bg-blue-600 p-2 text-center text-white text-sm rounded-lg ">
+        <button
+          onClick={deleteMeal}
+          className="mx-2 bg-blue-600 p-2 text-center text-white text-sm rounded-lg "
+        >
           مسح الوصفة
         </button>
       </div>
