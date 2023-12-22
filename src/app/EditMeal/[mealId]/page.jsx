@@ -17,6 +17,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { RiDeleteBin6Line } from "react-icons/ri";
 import { CiCircleMinus } from "react-icons/ci";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 const options = [
   { value: "2dQKzEa7LSPXgFyVrkjn", label: "ايطاليانو" },
   { value: "AmSjdSajPJa3HmEfPwzx", label: "هلا بالخليج" },
@@ -222,7 +223,7 @@ const EditMeal = ({ params }) => {
   useEffect(() => {
     const fetchMeal = async () => {
       try {
-        const mealCollection = doc(db, "AllMeals", mealId);
+        const mealCollection = doc(db, "Meal", mealId);
         const getMeal = await getDoc(mealCollection).then((doc) => {
           const data = doc.data();
           data.id = doc.id;
@@ -328,10 +329,7 @@ const EditMeal = ({ params }) => {
   const uploadImages = async () => {
     const uploadedImages = [];
     for (let i in selectedFile) {
-      const mealsImageRef = ref(
-        storage,
-        `AllMeals/${title}/${title}` + " " + i
-      );
+      const mealsImageRef = ref(storage, `Meals/${title}/${title}` + " " + i);
       await uploadBytes(mealsImageRef, selectedFile[i].blob).then(
         async (snapShot) => {
           const imagesToUpload = await getDownloadURL(mealsImageRef);
@@ -346,7 +344,7 @@ const EditMeal = ({ params }) => {
     setLoading(true);
     e.preventDefault();
     const images = await uploadImages();
-    const updatedMealDoc = doc(db, "AllMeals", mealId);
+    const updatedMealDoc = doc(db, "Meal", mealId);
     await updateDoc(updatedMealDoc, {
       title,
       flag,
@@ -447,12 +445,20 @@ const EditMeal = ({ params }) => {
   }
   return (
     <div className="m-10 bg-white shadow-2xl pb-10 flex flex-col w-[80%] border-solid border-2 rounded-xl mx-auto">
+      <div className="flex justify-start ml-6 mt-6">
+        <Link
+          href="/"
+          className="bg-blue-900 text-white rounded-lg px-6 py-2 text-center hover:bg-blue-400"
+        >
+          الرئيسية
+        </Link>
+      </div>
       {/* upload images */}
       <div className="mx-auto mt-10 h-60 mb-10">
         <div className="flex  justify-center items-center mx-4">
           {imageUrl.map((item, index) => {
             return (
-              <div className="text-center pb-5">
+              <div key={index} className="text-center pb-5">
                 <img
                   className="w-48 mx-1 rounded-md max-w-[200px] h-48 max-h-[200px] "
                   src={item}
@@ -470,7 +476,7 @@ const EditMeal = ({ params }) => {
           {selectedFile &&
             selectedFile.map((item, index) => {
               return (
-                <div className="text-center pb-5">
+                <div key={index} className="text-center pb-5">
                   <img
                     className="w-48 mx-1 rounded-md max-w-[200px] h-48 max-h-[200px] "
                     src={item.src}
@@ -590,7 +596,7 @@ const EditMeal = ({ params }) => {
           <div className="mt-4">
             {ingredients.map((item, index) => {
               return (
-                <div className="mb-2">
+                <div key={index} className="mb-2">
                   {ingredients.length > 1 && (
                     <button
                       className="text-2xl tex-red-900 p-6"
@@ -626,7 +632,7 @@ const EditMeal = ({ params }) => {
           <div className="mt-4">
             {steps.map((item, index) => {
               return (
-                <div className="mb-2">
+                <div key={index} className="mb-2">
                   {steps.length > 0 && (
                     <button
                       className="text-2xl tex-red-900 p-6"
@@ -658,9 +664,9 @@ const EditMeal = ({ params }) => {
         {/* categories */}
         <section className="flex  justify-around ">
           {state.length >= 1 &&
-            state.map((item) => {
+            state.map((item, index) => {
               return (
-                <div className="mt-4">
+                <div key={index} className="mt-4">
                   <button className="min-w-[100px] bg-gray-200 p-2 px-4 text-center font-semibold rounded-lg">
                     {item.label}
                   </button>

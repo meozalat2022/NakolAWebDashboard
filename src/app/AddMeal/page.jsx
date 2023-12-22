@@ -207,7 +207,7 @@ const AddMeal = () => {
     for (let i in selectedFile) {
       const mealsImageRef = ref(
         storage,
-        `AllMeals/${title}/${title}` + " " + i
+        `Meals/${title}/${title}` + " " + i
       );
       await uploadBytes(mealsImageRef, selectedFile[i].blob).then(
         async (snapShot) => {
@@ -223,7 +223,7 @@ const AddMeal = () => {
     setLoading(true);
     e.preventDefault();
     const imageUrl = await uploadImages();
-    await addDoc(collection(db, "AllMeals"), {
+    await addDoc(collection(db, "Meal"), {
       title,
       flag,
       duration,
@@ -309,6 +309,7 @@ const AddMeal = () => {
       hasRinga,
       hasFesekh,
       hasBorghal,
+      mealRating: 4
     });
 
     // reset all states again
@@ -422,7 +423,7 @@ const AddMeal = () => {
           {selectedFile &&
             selectedFile.map((item, index) => {
               return (
-                <div className="text-center pb-5">
+                <div key={index} className="text-center pb-5">
                   <img
                     className="w-48 mx-1 rounded-md max-w-[200px] h-48 max-h-[200px] "
                     src={item.src}
@@ -542,7 +543,7 @@ const AddMeal = () => {
           <div className="mt-4">
             {ingredients.map((item, index) => {
               return (
-                <div className="mb-2">
+                <div key={index} className="mb-2">
                   {ingredients.length > 1 && (
                     <button
                       className="text-2xl tex-red-900 p-6"
@@ -578,7 +579,7 @@ const AddMeal = () => {
           <div className="mt-4">
             {steps.map((item, index) => {
               return (
-                <div className="mb-2">
+                <div key={index} className="mb-2">
                   {steps.length > 0 && (
                     <button
                       className="text-2xl tex-red-900 p-6"

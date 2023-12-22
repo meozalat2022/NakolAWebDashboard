@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-const Card = ({ meal, key, deleteMeal }) => {
+const Card = ({ meal, deleteMeal }) => {
   return (
     <>
       <div className="w-[280px]  group cursor-pointer p-3 hover:shadow-slate-400 shadow-md rounded-lg border border-slate-400 m-2 transition-shadow duration-200">

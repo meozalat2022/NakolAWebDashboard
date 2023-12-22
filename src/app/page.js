@@ -13,18 +13,26 @@ import {
   query,
   limit,
   startAfter,
+  getCountFromServer,
 } from "firebase/firestore";
 import { db } from "../../config";
 
 export default function Home() {
   const [meals, setMeal] = useState([]);
-  const [latestVisited, setLatestVisited] = useState();
+  // const [latestVisited, setLatestVisited] = useState();
+  // const [collectionCount, setCollectionCount] = useState(null);
+  // const collectionArray = new Array(collectionCount);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const fetchMeals = async () => {
     try {
+      const col = collection(db, "Meal");
+      // const mealsCount = await getCountFromServer(col);
+      // setCollectionCount(mealsCount.data().count);
       const mealsCollection = query(
-        collection(db, "AllMeals"),
-        orderBy("timestamp", "desc"),
-        limit(2)
+        col,
+        orderBy("timestamp", "desc")
+        // limit(2)
       );
       const getMeals = await getDocs(mealsCollection);
       const allMeals = getMeals.docs.map((item) => {
@@ -34,42 +42,51 @@ export default function Home() {
       });
 
       setMeal(allMeals);
-      const lastVisible = getMeals.docs[getMeals.docs.length - 1];
-      setLatestVisited(lastVisible);
+      // const lastVisible = getMeals.docs[getMeals.docs.length - 1];
+      // setLatestVisited(lastVisible);
     } catch (error) {
       console.log("error", error);
     }
   };
+  // const fetChMore = async () => {
+  //   try {
+  //     const mealsCollection = query(
+  //       collection(db, "AllMeals"),
+  //       orderBy("timestamp", "desc"),
+  //       startAfter(latestVisited),
+  //       limit(2)
+  //     );
+  //     const getMeals = await getDocs(mealsCollection);
+  //     const allMeals = getMeals.docs.map((item) => {
+  //       const data = item.data();
+  //       data.id = item.id;
+  //       return data;
+  //     });
 
-  const fetChMore = async () => {
-    try {
-      const mealsCollection = query(
-        collection(db, "AllMeals"),
-        orderBy("timestamp", "desc"),
-        startAfter(latestVisited),
-        limit(2)
-      );
-      const getMeals = await getDocs(mealsCollection);
-      const allMeals = getMeals.docs.map((item) => {
-        const data = item.data();
-        data.id = item.id;
-        return data;
-      });
+  //     setMeal((prev) => [...prev, ...allMeals]);
+  //     const lastVisible = getMeals.docs[getMeals.docs.length - 1];
+  //     setLatestVisited(lastVisible);
+  //   } catch (error) {
+  //     console.log("error", error);
+  //   }
+  // };
 
-      setMeal((prev) => [...prev, ...allMeals]);
-      const lastVisible = getMeals.docs[getMeals.docs.length - 1];
-      setLatestVisited(lastVisible);
-    } catch (error) {
-      console.log("error", error);
-    }
-  };
   const deleteMeal = async (id) => {
-    await deleteDoc(doc(db, "AllMeals", id));
-    fetchMeals();
+    await deleteDoc(doc(db, "Meal", id));
   };
+
   useEffect(() => {
     fetchMeals();
   }, []);
+
+  const searchedMeals = meals.filter((val) => {
+    if (searchTerm == "") {
+      return val;
+    } else if (val.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return val;
+    }
+  });
+
   if (!meals || meals.length < 1) {
     return (
       <div className="bg-white w-full h-screen  flex items-center justify-center">
@@ -87,29 +104,38 @@ export default function Home() {
           اضافة وصفة
         </Link>
       </div>
-      <div className="sm:grid bg-gray-100 h-screen rounded-md shadow-2xl sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 max-w-6xl mx-auto py-4">
-        {meals &&
-          meals.map((item) => {
+      <div className="flex justify-center p-4">
+        <input
+          value={searchTerm}
+          className="w-1/2 flex self-center mt-5 rounded-md p-2 text-center"
+          type="text"
+          placeholder="بحث عن وصفة"
+          onChange={(event) => setSearchTerm(event.target.value)}
+        />
+      </div>
+      <div className="sm:grid bg-gray-50 h-full rounded-md shadow-2xl sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 max-w-7xl mx-auto py-4">
+        {searchedMeals &&
+          searchedMeals.map((item) => {
             return (
-              <div className="m-1" key={item.id}>
+              <div key={item.id} className="m-1">
                 <Card
                   deleteMeal={() => {
                     deleteMeal(item.id);
                   }}
                   meal={item}
-                  key={item.id}
                 />
               </div>
             );
           })}
       </div>
+
       <div className="flex justify-center items-center mt-10">
-        <button
+        {/* <button
           className="p-4 rounded-lg bg-blue-800 text-white hover:bg-blue-400 px-8"
           onClick={fetChMore}
         >
           المزيد
-        </button>
+        </button> */}
       </div>
     </>
   );
